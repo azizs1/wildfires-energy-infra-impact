@@ -8,6 +8,7 @@ This project explores the use of urban computing techniques to model the spread 
 ### Initial Setup
 1. Add the needed data into the data folder. There should be 3 CSV files for energy infrastructure data and 1 SQLite file for wildfire data.
 2. Run `uv sync` to download any dependencies within a virtual environment.
+>NOTE: When running Python files, you must use `uv run python sample.py`.
 
 ## Acknowledgments
 - We use the [2.3 Million Wildfires](https://www.kaggle.com/datasets/braddarrow/23-million-wildfires) dataset uploaded to Kaggle by Brad Darrow and originally compiled by Karen Short for wildfire data.
