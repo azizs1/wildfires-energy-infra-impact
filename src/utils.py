@@ -4,10 +4,23 @@
 
 import sqlite3
 import pandas as pd
+import os
 from pathlib import Path
-from config import WILDFIRE_SQLITE_PATH
+from config import WILDFIRE_SQLITE_PATH, WILDFIRE_CSV_PATH
 
-def get_fires_df():
+def convert_fires_sql_to_csv():
+    if os.path.exists(WILDFIRE_CSV_PATH):
+        print("Wildfires CSV file already exists!")
+        return
+    
+    if not os.path.exists(WILDFIRE_SQLITE_PATH):
+        print("Wildfires SQLite does not exist!")
+        return
+
     sl_connection = sqlite3.connect(WILDFIRE_SQLITE_PATH)
     fires_df = pd.read_sql("SELECT * FROM Fires;", sl_connection)
-    return fires_df
+    sl_connection.close()
+
+    fires_df.to_csv(WILDFIRE_CSV_PATH, index=True)
+    print(f"Saved CSV to {WILDFIRE_CSV_PATH}")
+    return
