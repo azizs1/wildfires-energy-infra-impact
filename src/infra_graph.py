@@ -124,47 +124,15 @@ class InfraGraph:
 
     def _compute_metrics(self):
         G = self.graph
+        self.metrics['degree_centrality'] = nx.degree_centrality(G)
+        self.metrics['clustering'] = nx.clustering(G)
+        self.metrics['num_clusters'] = nx.number_connected_components(G)
+        self.metrics['clusters'] = list(nx.connected_components(G))
+        self.metrics['betweenness'] = nx.betweenness_centrality(G)
+        self.metrics['cluster_sizes'] = [len(c) for c in self.metrics['clusters']]
+        self.metrics['num_nodes'] = G.number_of_nodes()
+        self.metrics['num_edges'] = G.number_of_edges()
 
-        if G is None or G.number_of_nodes() == 0:
-            self.metrics["warning"] = "Graph is empty?!"
-            return self.metrics
-
-        num_nodes = G.number_of_nodes()
-        num_edges = G.number_of_edges()
-
-        # Count node types
-        num_substations = sum(
-            1 for _, data in G.nodes(data=True)
-            if data.get("node_type") == "substation"
-        )
-        num_plants = sum(
-            1 for _, data in G.nodes(data=True)
-            if data.get("node_type") == "plant"
-        )
-
-        # Connected components
-        components = list(nx.connected_components(G))
-        num_components = len(components)
-        largest_component_size = max(len(c) for c in components) if components else 0
-
-        # Average degree (2E / N for undirected graph)
-        avg_degree = (2 * num_edges / num_nodes) if num_nodes > 0 else 0.0
-
-        self.metrics.update(
-            {
-                "num_nodes": num_nodes,
-                "num_edges": num_edges,
-                "num_substations": num_substations,
-                "num_plants": num_plants,
-                "num_components": num_components,
-                "largest_component_size": largest_component_size,
-                "avg_degree": avg_degree,
-            }
-        )
-
-        print("Basic infra graph metrics:", self.metrics)
-
-        self.plot_geo()
         return self.metrics
 
     def california_records(self):
@@ -183,11 +151,7 @@ class InfraGraph:
         return self.metrics
 
     def plot_geo(self, state=None, show_plants=True):
-        """Plot the infrastructure network using Plotly (Scattergeo)
-        with low node opacity and low edge opacity."""
-        import plotly.graph_objects as go
-        import pandas as pd
-
+        """Plot the infrastructure network using Plotly (Scattergeo) with low node opacity and low edge opacity."""
         if self.graph is None or self.graph.number_of_nodes() == 0:
             self.build_graph()
 
