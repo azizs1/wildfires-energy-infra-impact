@@ -21,6 +21,6 @@ def convert_fires_sql_to_csv():
     fires_df = pd.read_sql("SELECT * FROM Fires;", sl_connection)
     sl_connection.close()
 
-    fires_df.to_csv(WILDFIRE_CSV_PATH, index=True)
+    fires_df.to_csv(WILDFIRE_CSV_PATH, index=False)
     print(f"Saved CSV to {WILDFIRE_CSV_PATH}")
     return

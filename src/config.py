@@ -12,3 +12,6 @@ WILDFIRE_CSV_PATH     = DATA_DIR / "FPA_FOD_20221014.csv"
 POWER_LINES_CSV_PATH  = DATA_DIR / "Electric__Power_Transmission_Lines.csv"
 POWER_PLANTS_CSV_PATH = DATA_DIR / "Power_Plants.csv"
 SUBSTATIONS_CSV_PATH  = DATA_DIR / "Substations.csv"
+
+WILDFIRE_SHP_PATH = DATA_DIR / "MTBS_Points" / "mtbs_FODpoints_DD.shp"
+WILDFIRE_PERIMS_SHP_PATH = DATA_DIR / "MTBS_Perimeters" / "mtbs_perims_DD.shp"
