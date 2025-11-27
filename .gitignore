@@ -3,4 +3,7 @@ __pycache__/
 *.sqlite
 uv.lock
 re
-data/
+*.dbf
+*.prj
+*.shp
+*.shx

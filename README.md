@@ -6,12 +6,13 @@ This project explores the use of urban computing techniques to model the spread 
 
 ## How to Use
 ### Initial Setup
-1. Add the needed data into the data folder. There should be 3 CSV files for energy infrastructure data and 1 SQLite file for wildfire data.
+1. Add the needed data into the data folder. There should be 3 CSV files for energy infrastructure data and for the wildfire data must be organized in the MTBS_Perimeters or MTBS_Points folders as needed. Within each of these folders there must be .dbf, .prj, .shp, and .shx files.
 2. Run `uv sync` to download any dependencies within a virtual environment.
 >NOTE: When running Python files, you must use `uv run python sample.py`.
 
 ## Acknowledgments
-- We use the [2.3 Million Wildfires](https://www.kaggle.com/datasets/braddarrow/23-million-wildfires) dataset uploaded to Kaggle by Brad Darrow and originally compiled by Karen Short for wildfire data.
+- ~We use the [2.3 Million Wildfires](https://www.kaggle.com/datasets/braddarrow/23-million-wildfires) dataset uploaded to Kaggle by Brad Darrow and originally compiled by Karen Short for wildfire data.~
+- We use the [Fire Occurrence and the Burned Areas Boundaries](https://www.mtbs.gov/direct-download) datasets published by the Monitoring Trends in Burn Severity (MTBS) program, operated by USGS and USDA Forest Service.
 - We use the following HIFLD datasets published on Kaggle by Behrooz Sohrabi for energy infrastructure data:
   - [US Electric Power Plants](https://www.kaggle.com/datasets/behroozsohrabi/us-electric-power-plants)
   - [US Electric Power Transmission Substations](https://www.kaggle.com/datasets/behroozsohrabi/us-electric-power-transmission-substations)
