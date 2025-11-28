@@ -5,13 +5,11 @@ import geopandas as gpd
 import plotly.graph_objects as go
 
 from shapely.geometry import Point, LineString
+from config import POWER_LINES_CSV_PATH, POWER_PLANTS_CSV_PATH, SUBSTATIONS_CSV_PATH
 
 class InfraGraph:
-    def __init__(self, lines_csv, plants_csv, substations_csv):
+    def __init__(self):
         """Initialize dem variables"""
-        self.lines_csv_path = lines_csv
-        self.plants_csv_path = plants_csv
-        self.substations_csv_path = substations_csv
         self.graph = nx.Graph()
         self.metrics = {}
         self.lines_df = None
@@ -21,7 +19,6 @@ class InfraGraph:
     def build_graph(self):
         """Uses substation/power plants as nodes and transmission lines as edges"""
         self._preprocessing()
-        self.california_records()
 
         G = nx.Graph()
 
@@ -33,36 +30,22 @@ class InfraGraph:
                     continue
                 node_id = row["name"]
 
-                G.add_node(
-                    node_id,
-                    node_type="substation",
-                    state=row.get("state"),
-                    latitude=row.get("latitude"),
-                    longitude=row.get("longitude"),
-                    sub_id=row.get("id") or row.get("objectid"),
-                )
+                G.add_node(node_id, node_type="substation", state=row.get("state"), latitude=row.get("latitude"), longitude=row.get("longitude"), sub_id=row.get("id") or row.get("objectid"))
 
         # Power plant nodes
         plants = self.plants_df
         if plants is not None:
             for _, row in plants.iterrows():
-                plant_id = None
-                if "plant_code" in plants.columns:
-                    plant_id = f"PLANT_{row['plant_code']}"
-                elif "name" in plants.columns:
-                    plant_id = f"PLANT_{row['name']}"
 
-                if plant_id is None or pd.isna(plant_id):
+                plant_code = row.get("plant_code")
+
+                # Skip missing plant_code
+                if plant_code is None or pd.isna(plant_code):
                     continue
 
-                G.add_node(
-                    plant_id,
-                    node_type="plant",
-                    name=row.get("name"),
-                    state=row.get("state"),
-                    latitude=row.get("latitude"),
-                    longitude=row.get("longitude"),
-                )
+                plant_id = f"PLANT_{str(plant_code).strip()}"
+
+                G.add_node(plant_id, node_type="plant", name=row.get("name"), state=row.get("state"), latitude=row.get("latitude"), longitude=row.get("longitude"))
 
         # Transmission line edges
         lines = self.lines_df
@@ -70,6 +53,14 @@ class InfraGraph:
             for _, row in lines.iterrows():
                 s1 = row["sub_1"]
                 s2 = row["sub_2"]
+
+                # Skip empty nodes
+                if pd.isna(s1) or pd.isna(s2):
+                    continue
+                if s1 == s2:
+                    continue  
+                if not (G.has_node(s1) and G.has_node(s2)):
+                    continue
 
                 edge_attrs = {
                     "line_id": row.get("id") or row.get("objectid"),
@@ -84,14 +75,15 @@ class InfraGraph:
 
         self.graph = G
         self._compute_metrics()
+        self.plot_geo()
 
         return self.graph, self.metrics
 
     def _preprocessing(self):
         """Clean data, convert N/As, drop required observations."""
-        lines = pd.read_csv(self.lines_csv_path)
-        plants = pd.read_csv(self.plants_csv_path)
-        subs = pd.read_csv(self.substations_csv_path)
+        lines = pd.read_csv(POWER_LINES_CSV_PATH)
+        plants = pd.read_csv(POWER_PLANTS_CSV_PATH)
+        subs = pd.read_csv(SUBSTATIONS_CSV_PATH, low_memory=False)
 
         NULL_LIKE = ["NOT AVAILABLE", "N/A", "NA", ""]
 
@@ -116,6 +108,13 @@ class InfraGraph:
         if {"sub_1", "sub_2"} <= set(lines.columns):
             lines = lines.dropna(subset=["sub_1", "sub_2"], how="all")
 
+        # filter only CA
+        if "state" in subs.columns:
+            subs = subs[subs["state"] == "CA"]
+
+        if "state" in plants.columns:
+            plants = plants[plants["state"] == "CA"]
+
         self.lines_df = lines
         self.plants_df = plants
         self.substations_df = subs
@@ -132,22 +131,6 @@ class InfraGraph:
         self.metrics['cluster_sizes'] = [len(c) for c in self.metrics['clusters']]
         self.metrics['num_nodes'] = G.number_of_nodes()
         self.metrics['num_edges'] = G.number_of_edges()
-
-        return self.metrics
-
-    def california_records(self):
-        lines = self.lines_df
-        plants = self.plants_df
-        subs = self.substations_df
-
-        self.metrics['num_ca_plants'] = len(plants[plants['state'] == 'CA'])
-        self.metrics['num_ca_substations'] = len(subs[subs['state'] == 'CA'])
-
-        ca_sub_names = set(subs[subs['state'] == 'CA']['name'])
-        ca_lines = lines[lines['sub_1'].isin(ca_sub_names) | lines['sub_2'].isin(ca_sub_names)]
-        self.metrics['num_ca_lines'] = len(ca_lines)
-
-        print(self.metrics)
         return self.metrics
 
     def plot_geo(self, state=None, show_plants=True):
@@ -207,7 +190,6 @@ class InfraGraph:
             edge_lons += [lon_u, lon_v, None]
             edge_lats += [lat_u, lat_v, None]
 
-        # Build plotly figure
         fig = go.Figure()
 
         # Transmission lines
@@ -223,7 +205,7 @@ class InfraGraph:
                 )
             )
 
-        # Substations 
+        # Substations
         if node_lons_sub:
             fig.add_trace(
                 go.Scattergeo(
@@ -239,7 +221,7 @@ class InfraGraph:
                 )
             )
 
-        # Plants (triangles)
+        # Plants
         if show_plants and node_lons_plant:
             fig.add_trace(
                 go.Scattergeo(
@@ -256,19 +238,16 @@ class InfraGraph:
                 )
             )
 
-        # Plot layout
-        title = "US Electric Infrastructure"
-        if state == "CA":
-            title = "California Electric Infrastructure"
-
+        # Layout
         fig.update_layout(
-            title=title,
+            title="California Electric Infrastructure",
             showlegend=True,
             geo=dict(
-                scope="usa",
-                projection_type="albers usa",
+                projection_type="mercator",
                 showland=True,
-                landcolor="rgb(240, 240, 240)",
+                landcolor="rgb(240,240,240)",
+                lataxis=dict(range=[32.53, 42.01]), 
+                lonaxis=dict(range=[-124.48, -114.13]), 
             ),
             margin=dict(l=0, r=0, t=40, b=0),
         )
