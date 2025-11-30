@@ -34,13 +34,14 @@ class WildfireGraph:
         
         # Make the nodes just based on all of the fire regions
         for _, row in tqdm(mtbs_perims_ca.iterrows(), total=len(mtbs_perims_ca), desc="Adding nodes"):
-            self.graph.add_node(row["Event_ID"], size=row["BurnBndAc"], severity=row["High_T"])
+            self.graph.add_node(row["Event_ID"], size=row["BurnBndAc"], severity=row["High_T"], 
+                                geometry=row.geometry)
         
         # Make the edges based on spatial overlaps
         for _, row in tqdm(pairs.iterrows(), total=len(pairs), desc="Adding edges"):
             self.graph.add_edge(row["Event_ID_left"], row["Event_ID_right"])
 
-        # Plot the wildfires. Using BurnBndAc to color based on severity for now
+        # Plot the wildfires. Using BurnBndAc to color based on size for now
         fig, ax = plt.subplots(figsize=(12, 12))
         mtbs_perims_ca.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, ax=ax)
 
