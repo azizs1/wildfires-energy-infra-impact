@@ -69,7 +69,7 @@ class WildfireGraph:
         self.metrics['clustering'] = nx.clustering(self.graph)
         self.metrics['betweenness'] = nx.betweenness_centrality(self.graph)
         self.metrics['num_clusters'] = nx.number_connected_components(self.graph)
-        self.metrics['clusters'] = list(nx.connected_components(self.graph))
+        self.metrics['clusters'] = [list(c) for c in nx.connected_components(self.graph)]
 
         # print("Degree centrality:", self.metrics['degree_centrality'])
         # print("Clustering:", self.metrics['clustering'])

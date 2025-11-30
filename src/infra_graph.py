@@ -126,7 +126,7 @@ class InfraGraph:
         self.metrics['degree_centrality'] = nx.degree_centrality(G)
         self.metrics['clustering'] = nx.clustering(G)
         self.metrics['num_clusters'] = nx.number_connected_components(G)
-        self.metrics['clusters'] = list(nx.connected_components(G))
+        self.metrics['clusters'] = [list(c) for c in nx.connected_components(G)]
         self.metrics['betweenness'] = nx.betweenness_centrality(G)
         self.metrics['cluster_sizes'] = [len(c) for c in self.metrics['clusters']]
         self.metrics['num_nodes'] = G.number_of_nodes()
