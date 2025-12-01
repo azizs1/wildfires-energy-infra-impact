@@ -25,9 +25,9 @@ def convert_fires_sql_to_csv():
     print(f"Saved CSV to {WILDFIRE_CSV_PATH}")
     return
 
-def plot_wildfires(ax, wf_gdf):
+def plot_wildfires(ax, wf_gdf, col="size"):
     if not wf_gdf.empty:
-        wf_gdf.plot(ax=ax, column="size", cmap="OrRd", alpha=0.5, 
+        wf_gdf.plot(ax=ax, column=col, cmap="OrRd", alpha=0.5, 
                     edgecolor="red", linewidth=0.1, legend=True)
     return
 
