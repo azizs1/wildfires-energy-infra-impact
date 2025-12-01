@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
-import networkx as nx
 import pandas as pd
+import networkx as nx
 import geopandas as gpd
+import contextily as ctx
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point
+from utils import plot_infra
 from config import POWER_LINES_CSV_PATH, POWER_PLANTS_CSV_PATH, SUBSTATIONS_CSV_PATH
 
 class InfraGraph:
@@ -75,7 +77,7 @@ class InfraGraph:
 
         self.graph = G
         self._compute_metrics()
-        self.plot_geo()
+        self._plot_geo()
 
         return self.graph, self.metrics
 
@@ -133,124 +135,23 @@ class InfraGraph:
         self.metrics['num_edges'] = G.number_of_edges()
         return self.metrics
 
-    def plot_geo(self, state=None, show_plants=True):
-        """Plot the infrastructure network using Plotly (Scattergeo) with low node opacity and low edge opacity."""
+    def _plot_geo(self, state=None, show_plants=True):
+        """Plot the infrastructure network"""
         if self.graph is None or self.graph.number_of_nodes() == 0:
             self.build_graph()
 
-        G = self.graph
+        # The idea for plotting is basically load all the nodes into a GDF and plot them after
+        infra_nodes = []
+        for n, data in self.graph.nodes(data=True):
+            if "latitude" in data and "longitude" in data:
+                # It HAS to be called geometry to make gdf happy
+                infra_nodes.append({
+                    "id": n, "geometry": Point(data["longitude"], data["latitude"]),
+                    "node_type": data.get("node_type", "infra"), "state": data.get("state")
+                })
+        infra_gdf = gpd.GeoDataFrame(infra_nodes, crs="EPSG:4326").to_crs(epsg=3857)
 
-        node_lons_sub = []
-        node_lats_sub = []
-        node_lons_plant = []
-        node_lats_plant = []
-
-        included_nodes = set()
-
-        if state == "CA":
-            lon_min, lon_max = -124.48, -114.13
-            lat_min, lat_max = 32.53, 42.01
-
-        for n, data in G.nodes(data=True):
-            lon = data.get("longitude")
-            lat = data.get("latitude")
-
-            if pd.isna(lon) or pd.isna(lat):
-                continue
-
-            if state == "CA":
-                if not (lon_min <= lon <= lon_max and lat_min <= lat <= lat_max):
-                    continue
-
-            included_nodes.add(n)
-
-            if data.get("node_type") == "substation":
-                node_lons_sub.append(lon)
-                node_lats_sub.append(lat)
-            elif data.get("node_type") == "plant":
-                node_lons_plant.append(lon)
-                node_lats_plant.append(lat)
-
-        edge_lons = []
-        edge_lats = []
-
-        for u, v, edata in G.edges(data=True):
-            if u not in included_nodes or v not in included_nodes:
-                continue
-
-            nu = G.nodes[u]
-            nv = G.nodes[v]
-
-            lon_u, lat_u = nu.get("longitude"), nu.get("latitude")
-            lon_v, lat_v = nv.get("longitude"), nv.get("latitude")
-
-            if pd.isna(lon_u) or pd.isna(lat_u) or pd.isna(lon_v) or pd.isna(lat_v):
-                continue
-
-            edge_lons += [lon_u, lon_v, None]
-            edge_lats += [lat_u, lat_v, None]
-
-        fig = go.Figure()
-
-        # Transmission lines
-        if edge_lons:
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=edge_lons,
-                    lat=edge_lats,
-                    mode="lines",
-                    line=dict(width=0.4, color="rgba(150,150,150,0.10)"),
-                    hoverinfo="none",
-                    name="Transmission Lines",
-                )
-            )
-
-        # Substations
-        if node_lons_sub:
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=node_lons_sub,
-                    lat=node_lats_sub,
-                    mode="markers",
-                    marker=dict(
-                        size=1.5,
-                        color="blue",
-                        opacity=0.25, 
-                    ),
-                    name="Substations",
-                )
-            )
-
-        # Plants
-        if show_plants and node_lons_plant:
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=node_lons_plant,
-                    lat=node_lats_plant,
-                    mode="markers",
-                    marker=dict(
-                        size=4,
-                        symbol="triangle-up",
-                        color="red",
-                        opacity=0.35,
-                    ),
-                    name="Plants",
-                )
-            )
-
-        # Layout
-        fig.update_layout(
-            title="California Electric Infrastructure",
-            showlegend=True,
-            geo=dict(
-                projection_type="mercator",
-                showland=True,
-                landcolor="rgb(240,240,240)",
-                lataxis=dict(range=[32.53, 42.01]), 
-                lonaxis=dict(range=[-124.48, -114.13]), 
-            ),
-            margin=dict(l=0, r=0, t=40, b=0),
-        )
-
-        fig.show()
-        return fig
+        fig, ax = plt.subplots(figsize=(12, 12))
+        plot_infra(ax, self.graph, infra_gdf)
+        ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
+        plt.savefig("infra.png", dpi=300)

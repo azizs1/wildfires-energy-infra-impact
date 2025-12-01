@@ -44,7 +44,7 @@ def plot_infra(ax, infra_graph, infra_gdf):
         # Drawing the edges here
         for start, end in infra_graph.edges():
             start_geom = infra_gdf.loc[infra_gdf["id"] == start, "geometry"].values[0]
-            end_geom   = infra_gdf.loc[infra_gdf["id"] == end, "geometry"].values[0]
+            end_geom = infra_gdf.loc[infra_gdf["id"] == end, "geometry"].values[0]
 
             ax.plot([start_geom.x, end_geom.x], [start_geom.y, end_geom.y], 
                     color="white", linewidth=0.2, alpha=0.5)
