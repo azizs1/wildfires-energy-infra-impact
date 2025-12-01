@@ -24,3 +24,28 @@ def convert_fires_sql_to_csv():
     fires_df.to_csv(WILDFIRE_CSV_PATH, index=False)
     print(f"Saved CSV to {WILDFIRE_CSV_PATH}")
     return
+
+def plot_wildfires(ax, wf_gdf):
+    if not wf_gdf.empty:
+        wf_gdf.plot(ax=ax, column="size", cmap="OrRd", alpha=0.5, 
+                    edgecolor="red", linewidth=0.1, legend=True)
+    return
+
+def plot_infra(ax, infra_graph, infra_gdf):
+    if not infra_gdf.empty:
+        substations = infra_gdf[infra_gdf["node_type"] == "substation"]
+        plants = infra_gdf[infra_gdf["node_type"] == "plant"]
+
+        ax.scatter(substations.geometry.x, substations.geometry.y,
+                color="cyan", marker="^", s=2, label="Substations")
+        ax.scatter(plants.geometry.x, plants.geometry.y,
+                color="yellow", marker="o", s=2, label="Power Plants")
+
+        # Drawing the edges here
+        for start, end in infra_graph.edges():
+            start_geom = infra_gdf.loc[infra_gdf["id"] == start, "geometry"].values[0]
+            end_geom   = infra_gdf.loc[infra_gdf["id"] == end, "geometry"].values[0]
+
+            ax.plot([start_geom.x, end_geom.x], [start_geom.y, end_geom.y], 
+                    color="white", linewidth=0.2, alpha=0.5)
+    return
