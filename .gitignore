@@ -7,3 +7,6 @@ re
 *.prj
 *.shp
 *.shx
+
+images/
+cache/

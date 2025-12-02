@@ -2,7 +2,7 @@ import os
 import json
 import pickle
 import argparse
-from config import CACHE_DIR
+from config import CACHE_DIR, IMG_DIR
 
 from utils import convert_fires_sql_to_csv
 from wildfire_graph import WildfireGraph
@@ -38,6 +38,9 @@ def main():
     parser.add_argument("--no-cache", action="store_true",
                         help="Force rebuild of graphs instead of using cache")
     args = parser.parse_args()
+
+    # Make the images dir if it doesn't exist
+    IMG_DIR.mkdir(parents=True, exist_ok=True)
 
     wildfire_graph = WildfireGraph()
     wf_graph, wf_metrics = load_build("wildfires", wildfire_graph.build_graph, args.no_cache)

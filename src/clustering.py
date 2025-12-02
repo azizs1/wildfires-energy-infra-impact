@@ -3,6 +3,7 @@ import geopandas as gpd
 import contextily as ctx
 import matplotlib.pyplot as plt
 from utils import plot_infra, plot_wildfires
+from config import IMG_DIR
 
 def run_clustering(infra_gdf, wf_gdf, infra_graph, wf_graph):
     print(wf_gdf.head())
@@ -31,6 +32,6 @@ def run_clustering(infra_gdf, wf_gdf, infra_graph, wf_graph):
     plot_infra(ax, infra_graph, infra_gdf)
 
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
-    plt.savefig("clustered_fires.png", dpi=300)
+    plt.savefig(IMG_DIR / "clustered_fires.png", dpi=300)
 
     pass

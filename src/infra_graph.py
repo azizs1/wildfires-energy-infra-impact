@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 
 from shapely.geometry import Point
 from utils import plot_infra
-from config import POWER_LINES_CSV_PATH, POWER_PLANTS_CSV_PATH, SUBSTATIONS_CSV_PATH
+from config import POWER_LINES_CSV_PATH, POWER_PLANTS_CSV_PATH, SUBSTATIONS_CSV_PATH, IMG_DIR
 
 class InfraGraph:
     def __init__(self):
@@ -154,4 +154,4 @@ class InfraGraph:
         fig, ax = plt.subplots(figsize=(12, 12))
         plot_infra(ax, self.graph, infra_gdf)
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
-        plt.savefig("infra.png", dpi=300)
+        plt.savefig(IMG_DIR / "infra.png", dpi=300)

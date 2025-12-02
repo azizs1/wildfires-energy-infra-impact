@@ -4,6 +4,7 @@ import contextily as ctx
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 from utils import plot_infra, plot_wildfires
+from config import IMG_DIR
 
 def analyze_overlay(infra_graph, wf_graph):
     print(infra_graph.nodes[list(infra_graph.nodes())[0]])
@@ -33,6 +34,6 @@ def analyze_overlay(infra_graph, wf_graph):
     plot_wildfires(ax, wf_gdf)
 
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
-    plt.savefig("overlay.png", dpi=300)
+    plt.savefig(IMG_DIR / "overlay.png", dpi=300)
 
     return infra_gdf, wf_gdf

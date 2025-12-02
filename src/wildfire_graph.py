@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import contextily as ctx
 import geopandas as gpd
-from config import WILDFIRE_SHP_PATH, WILDFIRE_PERIMS_SHP_PATH
+from config import WILDFIRE_SHP_PATH, WILDFIRE_PERIMS_SHP_PATH, IMG_DIR
 
 class WildfireGraph:
     def __init__(self):
@@ -26,7 +26,7 @@ class WildfireGraph:
         # Save the plot that just has the perims with no edges
         ax = mtbs_perims_ca.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, figsize=(12, 12))
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
-        plt.savefig("wildfire_graph_mtbs.png", dpi=300)
+        plt.savefig(IMG_DIR / "wildfire_graph_mtbs.png", dpi=300)
 
         # Find pairs of wildfires that overlap and remove self-joins
         pairs = gpd.sjoin(mtbs_perims_ca, mtbs_perims_ca)
@@ -55,7 +55,7 @@ class WildfireGraph:
 
         # Add dark basemap for new plot
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
-        plt.savefig("wildfire_graph_edges.png", dpi=300)
+        plt.savefig(IMG_DIR / "wildfire_graph_edges.png", dpi=300)
 
         return self.graph, self._compute_metrics()
 

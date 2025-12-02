@@ -7,6 +7,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 CACHE_DIR = BASE_DIR / "cache"
 DATA_DIR = BASE_DIR / "data"
+IMG_DIR = BASE_DIR / "images"
 
 WILDFIRE_SQLITE_PATH  = DATA_DIR / "FPA_FOD_20221014.sqlite"
 WILDFIRE_CSV_PATH     = DATA_DIR / "FPA_FOD_20221014.csv"
