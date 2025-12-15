@@ -19,12 +19,14 @@ class WildfireGraph:
         mtbs_perims_ca = mtbs_perims[mtbs_perims["Event_ID"].str.startswith("CA")].copy()
         print(f"ca_size: {len(mtbs_perims_ca)}")
 
-        # Reproject for basemap
-        mtbs_perims_ca = mtbs_perims_ca.to_crs(epsg=3857)
+        # Reproject to 3310 for cali, then 3857 for plotting
+        mtbs_perims_ca = mtbs_perims_ca.to_crs(epsg=3310)
         mtbs_perims_ca["centroid"] = mtbs_perims_ca.geometry.centroid
 
         # Save the plot that just has the perims with no edges
-        ax = mtbs_perims_ca.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, figsize=(12, 12))
+        mtbs_perims_ca_display = mtbs_perims_ca.to_crs(epsg=3857)
+        mtbs_perims_ca_display["centroid"] = mtbs_perims_ca_display.geometry.centroid
+        ax = mtbs_perims_ca_display.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, figsize=(12, 12))
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
         plt.savefig(IMG_DIR / "wildfire_graph_mtbs.png", dpi=300)
 
@@ -43,12 +45,12 @@ class WildfireGraph:
 
         # Plot the wildfires. Using BurnBndAc to color based on size for now
         fig, ax = plt.subplots(figsize=(12, 12))
-        mtbs_perims_ca.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, ax=ax)
+        mtbs_perims_ca_display.plot(column="BurnBndAc", cmap="OrRd", alpha=0.5, ax=ax)
 
         # Plot edges between centroids
         for u, v in self.graph.edges():
-            c1 = mtbs_perims_ca.loc[mtbs_perims_ca["Event_ID"] == u, "centroid"].values[0]
-            c2 = mtbs_perims_ca.loc[mtbs_perims_ca["Event_ID"] == v, "centroid"].values[0]
+            c1 = mtbs_perims_ca_display.loc[mtbs_perims_ca_display["Event_ID"] == u, "centroid"].values[0]
+            c2 = mtbs_perims_ca_display.loc[mtbs_perims_ca_display["Event_ID"] == v, "centroid"].values[0]
             xs = [c1.x, c2.x]
             ys = [c1.y, c2.y]
             ax.plot(xs, ys, color="blue", linewidth=0.5, alpha=0.5)

@@ -144,7 +144,7 @@ class InfraGraph:
         return self.metrics
 
     def dbscan_clustering(self, node_type="substation", eps_deg=0.05, 
-                            min_samples=3, top_n=5):
+                            min_samples=3, top_n=10):
         """Run DBSCAN clustering and plot results with basemap."""
         # Extract nodes with coordinates
         nodes = [
@@ -165,8 +165,8 @@ class InfraGraph:
         coords = df[["lon", "lat"]].values
         df["cluster_label"] = DBSCAN(eps=eps_deg, min_samples=min_samples).fit_predict(coords)
         
-        # Convert to Web Mercator for basemap
-        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326").to_crs(epsg=3857)
+        # Convert to California Albers for basemap (could use 3857 here, but since we are ca focused, just use 3310)
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326").to_crs(epsg=3310)
         
         # Identify top clusters
         labels = gdf["cluster_label"]
@@ -189,21 +189,22 @@ class InfraGraph:
         print(comp.head())
 
         # Create plot
+        gdf_display = gdf.to_crs(epsg=3857)
         fig, ax = plt.subplots(figsize=(12, 12))
         cmap = cm.get_cmap('Set1', top_n)
         
         # Plot noise points
-        noise = gdf[labels == -1]
+        noise = gdf_display[labels == -1]
         if not noise.empty:
             noise.plot(ax=ax, color="lightgray", markersize=5, alpha=0.4, label="Noise")
         
         # Plot top clusters
         for i, cluster_id in enumerate(top_clusters):
-            cluster = gdf[labels == cluster_id]
+            cluster = gdf_display[labels == cluster_id]
             cluster.plot(ax=ax, color=cmap(i), markersize=20, alpha=0.7, label=f"Cluster {cluster_id} (n={len(cluster)})")
         
         # Plot remaining clusters
-        other = gdf[~labels.isin(top_clusters + [-1])]
+        other = gdf_display[~labels.isin(top_clusters + [-1])]
         if not other.empty:
             other.plot(ax=ax, color="gray", markersize=8, alpha=0.3, label=f"Other ({n_clusters - top_n})")
         
@@ -215,8 +216,7 @@ class InfraGraph:
         plt.savefig(IMG_DIR / f"infra_clusters_{node_type}.png", dpi=300, bbox_inches="tight")
         print(f"Saved to {IMG_DIR / f'infra_clusters_{node_type}.png'}")
 
-
-    def _plot_geo(self, state=None, show_plants=True):
+    def _plot_geo(self):
         """Plot the infrastructure network"""
         if self.graph is None or self.graph.number_of_nodes() == 0:
             self.build_graph()
@@ -230,9 +230,10 @@ class InfraGraph:
                     "id": n, "geometry": Point(data["longitude"], data["latitude"]),
                     "node_type": data.get("node_type", "infra"), "state": data.get("state")
                 })
-        infra_gdf = gpd.GeoDataFrame(infra_nodes, crs="EPSG:4326").to_crs(epsg=3857)
+        infra_gdf = gpd.GeoDataFrame(infra_nodes, crs="EPSG:4326").to_crs(epsg=3310)
 
         fig, ax = plt.subplots(figsize=(12, 12))
-        plot_infra(ax, self.graph, infra_gdf)
+        infra_gdf_display = infra_gdf.to_crs(epsg=3857)
+        plot_infra(ax, self.graph, infra_gdf_display)
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
         plt.savefig(IMG_DIR / "infra.png", dpi=300)

@@ -28,8 +28,8 @@ def run_clustering(infra_gdf, wf_gdf, infra_graph, wf_graph):
     clustered_gdf = wf_gdf.dissolve(by="cluster")
 
     fig, ax = plt.subplots(figsize=(12, 12))
-    plot_wildfires(ax, clustered_gdf)
     plot_infra(ax, infra_graph, infra_gdf)
+    plot_wildfires(ax, clustered_gdf)
 
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
     plt.savefig(IMG_DIR / "clustered_fires.png", dpi=300)
