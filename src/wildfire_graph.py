@@ -128,13 +128,13 @@ class WildfireGraph:
 
         return clusters
 
-    def _wildfire_hotspots(self, mtbs_perims_ca, bandwidth_km=20):
+    def _wildfire_hotspots(self, mtbs_perims_ca, bandwidth=20000):
         gdf = mtbs_perims_ca.to_crs(epsg=3310)
         gdf["centroid"] = gdf.geometry.centroid
         coords = np.array([[pt.x, pt.y] for pt in gdf["centroid"]])
 
         # use KDE for the heatmaps
-        kde = KernelDensity(bandwidth=bandwidth_km*1000, kernel="gaussian")
+        kde = KernelDensity(bandwidth=bandwidth, kernel="gaussian")
         kde.fit(coords)
 
         x_min, y_min, x_max, y_max = gdf.total_bounds

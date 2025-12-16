@@ -50,7 +50,7 @@ def main():
     i_graph, i_metrics = load_build("infra", infra_graph.build_graph, args.no_cache)
 
     wf_gdf = wildfire_graph.get_perimeters_gdf()
-    risk_df = compute_composite_cluster_risk(i_graph, wf_gdf, eps_deg=0.03)
+    risk_df = compute_composite_cluster_risk(i_graph, wf_gdf, eps=3000)
     export_risk_report(risk_df)
 
     i_gdf, wf_gdf = analyze_overlay(i_graph, wf_graph)

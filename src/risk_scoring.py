@@ -127,31 +127,22 @@ def compute_all_fire_metrics(infra_gdf, wf_gdf, buffer_km=10):
     
     return gdf
 
-def cluster_substations(infra_graph, eps_deg=0.05, min_samples=3):
-    """Run DBSCAN spatial clustering on substations."""
-    nodes = [
-        (nid, d["longitude"], d["latitude"])
-        for nid, d in infra_graph.nodes(data=True)
-        if d.get("longitude") and d.get("latitude")
-    ]
-    
+def cluster_substations(infra_graph, eps=5000, min_samples=3):
+    nodes = []
+    for nid, data in infra_graph.nodes(data=True):
+        lon = data.get("longitude")
+        lat = data.get("latitude")
+        if lon is not None and lat is not None:
+            nodes.append((nid, lon, lat))
+
     if not nodes:
         return None
     
     df = pd.DataFrame(nodes, columns=["id", "lon", "lat"])
-    coords = df[["lon", "lat"]].values
-    df["cluster_label"] = DBSCAN(eps=eps_deg, min_samples=min_samples).fit_predict(coords)
-    
-    gdf = gpd.GeoDataFrame(
-        df,
-        geometry=gpd.points_from_xy(df.lon, df.lat),
-        crs="EPSG:4326"
-    ).to_crs(epsg=3310)
-    
-    n_clusters = df[df["cluster_label"] != -1]["cluster_label"].nunique()
-    n_noise = (df["cluster_label"] == -1).sum()
-    print(f"DBSCAN clustering: {n_clusters} clusters, {n_noise} noise points")
-    
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326").to_crs(epsg=3310)
+    coords = np.column_stack([gdf.geometry.x, gdf.geometry.y])
+    labels = DBSCAN(eps=eps, min_samples=min_samples).fit_predict(coords)
+    gdf["cluster_label"] = labels
     return gdf
 
 
@@ -208,7 +199,7 @@ def normalize(series):
     return pd.Series(0, index=series.index)
 
 
-def compute_composite_cluster_risk(infra_graph, wf_gdf, eps_deg=0.05, min_samples=3, buffer_km=10, weight_outage=0.35, weight_betweenness=0.25, weight_fire=0.40,top_k=15):
+def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3, buffer_km=10, weight_outage=0.35, weight_betweenness=0.25, weight_fire=0.40,top_k=15):
     """Compute composite risk scores combining infrastructure and wildfire metrics."""
     
     # Ensure weights sum to 1
@@ -222,7 +213,7 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps_deg=0.05, min_sample
     print("COMPOSITE RISK ANALYSIS")
     print("="*60)
     
-    infra_gdf = cluster_substations(infra_graph, eps_deg, min_samples)
+    infra_gdf = cluster_substations(infra_graph, eps, min_samples)
     if infra_gdf is None or infra_gdf.empty:
         print("No substations to analyze.")
         return pd.DataFrame()
@@ -333,7 +324,6 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps_deg=0.05, min_sample
     
     return df
 
-
 def plot_risk_map(risk_df, infra_gdf, wf_gdf, top_k=10):
     """
     Generate a map showing high-risk clusters overlaid on wildfire history.
@@ -373,7 +363,7 @@ def plot_risk_map(risk_df, infra_gdf, wf_gdf, top_k=10):
         cluster_subs.plot(
             ax=ax,
             color=colors[i],
-            markersize=50,
+            markersize=7,
             alpha=0.8,
             label=f"#{i+1} Cluster {cid} (risk={risk_score:.3f})"
         )
@@ -399,7 +389,6 @@ def plot_risk_map(risk_df, infra_gdf, wf_gdf, top_k=10):
     plt.tight_layout()
     plt.savefig(IMG_DIR / "composite_risk_map.png", dpi=300, bbox_inches="tight")
     print(f"\nSaved risk map to {IMG_DIR / 'composite_risk_map.png'}")
-
 
 def export_risk_report(risk_df, output_path=None):
     """
