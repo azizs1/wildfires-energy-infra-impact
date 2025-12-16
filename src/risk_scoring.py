@@ -313,11 +313,11 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     lambda_km = 10
     df["proximity_risk"] = np.exp(-df["nearest_fire_km"] / lambda_km)
     
-    # Combine fire metrics: 60% burned area, 40% proximity
+    # Combine fire metrics
     df["fire_norm"] = (
-        0.45 * normalize(df["burned_acres"]) +
-        0.20 * normalize(df["high_severity_acres"]) +
-        0.20 * df["proximity_risk"] +
+        0.20 * normalize(df["burned_acres"]) +
+        0.30 * normalize(df["high_severity_acres"]) +
+        0.35 * df["proximity_risk"] +
         0.15 * normalize(df["fire_count"])
     )
     
