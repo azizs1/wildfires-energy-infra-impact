@@ -169,3 +169,9 @@ class WildfireGraph:
         # print("Number of clusters:", self.metrics['num_clusters'])
         # print("Cluster sizes:", [len(c) for c in self.metrics['clusters']])
         return self.metrics
+
+    def get_perimeters_gdf(self):        
+        mtbs_perims = gpd.read_file(WILDFIRE_PERIMS_SHP_PATH)
+        mtbs_perims_ca = mtbs_perims[mtbs_perims["Event_ID"].str.startswith("CA")].copy()
+        mtbs_perims_ca = mtbs_perims_ca.to_crs(epsg=3310)
+        return mtbs_perims_ca

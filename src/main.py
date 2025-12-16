@@ -9,6 +9,7 @@ from wildfire_graph import WildfireGraph
 from infra_graph import InfraGraph
 from graph_integration import analyze_overlay
 from clustering import run_clustering
+from risk_scoring import compute_composite_cluster_risk, export_risk_report
 
 def load_build(graph_name, build_graph_func, no_cache):
     graph_cache_pkl = f"{CACHE_DIR}/{graph_name}_graph_cache.pkl"
@@ -47,6 +48,10 @@ def main():
 
     infra_graph = InfraGraph()
     i_graph, i_metrics = load_build("infra", infra_graph.build_graph, args.no_cache)
+
+    wf_gdf = wildfire_graph.get_perimeters_gdf()
+    risk_df = compute_composite_cluster_risk(i_graph, wf_gdf, eps_deg=0.03)
+    export_risk_report(risk_df)
 
     i_gdf, wf_gdf = analyze_overlay(i_graph, wf_graph)
     run_clustering(i_gdf, wf_gdf, i_graph, wf_graph)
