@@ -62,9 +62,9 @@ class WildfireGraph:
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter)
         plt.savefig(IMG_DIR / "wildfire_graph_edges.png", dpi=300)
 
-        _, clusters = self.dbscan_wildfires(self.graph, mtbs_perims_ca)
+        _, clusters = dbscan_wildfires(mtbs_perims_ca)
         self.metrics["dbscan_clusters"] = clusters
-        # self.wildfire_hotspots(self.metrics, mtbs_perims_ca)
+        wildfire_hotspots(mtbs_perims_ca, plot=True)
 
         return self.graph, self._compute_metrics()
     
@@ -109,21 +109,11 @@ def dbscan_wildfires(mtbs_perims_ca, eps=20000, min_samples=17):
     # Assign cluster labels to nodes
     labels = clustering.labels_
     mtbs_perims_proj["cluster"] = labels
-    # for node_id, label in zip(ids, labels):
-    #     if node_id in graph.nodes:
-    #         graph.nodes[node_id]["cluster"] = int(label)
 
     # Store cluster summary
     clusters = {}
     for node_id, label in zip(ids, labels):
         clusters.setdefault(str(int(label)), []).append(node_id)
-
-    # cluster_map = {}
-    # for n, d in graph.nodes(data=True):
-    #     if "cluster" in d:
-    #         cluster_map[n] = d["cluster"]
-    #     else:
-    #         cluster_map[n] = -1
 
     mtbs_perims_mercator = mtbs_perims_ca.to_crs(epsg=3857)  # for basemap display
     mtbs_perims_mercator["cluster"] = mtbs_perims_proj["cluster"].values
@@ -156,7 +146,7 @@ def dbscan_wildfires(mtbs_perims_ca, eps=20000, min_samples=17):
 
     return mtbs_perims_proj, clusters
 
-def wildfire_hotspots(mtbs_perims_ca, bandwidth=20000):
+def wildfire_hotspots(mtbs_perims_ca, bandwidth=20000, plot=False):
     gdf = mtbs_perims_ca.to_crs(epsg=3310)
     gdf["centroid"] = gdf.geometry.centroid
     coords = np.array([[pt.x, pt.y] for pt in gdf["centroid"]])
@@ -165,17 +155,23 @@ def wildfire_hotspots(mtbs_perims_ca, bandwidth=20000):
     kde = KernelDensity(bandwidth=bandwidth, kernel="gaussian")
     kde.fit(coords)
 
-    x_min, y_min, x_max, y_max = gdf.total_bounds
-    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200), np.linspace(y_min, y_max, 200))
-    grid_coords = np.vstack([xx.ravel(), yy.ravel()]).T
-    zz = np.exp(kde.score_samples(grid_coords)).reshape(xx.shape)
+    if plot:
+        x_min, y_min, x_max, y_max = gdf.total_bounds
+        xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200), np.linspace(y_min, y_max, 200))
+        grid_coords = np.vstack([xx.ravel(), yy.ravel()]).T
+        zz = np.exp(kde.score_samples(grid_coords)).reshape(xx.shape)
 
-    # Plot heatmap
-    fig, ax = plt.subplots(figsize=(12, 12))
-    gdf.plot(ax=ax, facecolor="none", edgecolor="gray", alpha=0.3)
-    ax.imshow(zz, extent=(x_min, x_max, y_min, y_max),
-            origin="lower", cmap="hot", alpha=0.6)
-    plt.savefig(IMG_DIR / "wildfire_kde_hotspots.png", dpi=300)
-    plt.close(fig)
+        gdf_plot = gdf.to_crs(epsg=3857)
+        x_min, y_min, x_max, y_max = gdf_plot.total_bounds
+
+        fig, ax = plt.subplots(figsize=(12, 12))
+        gdf_plot.plot(ax=ax, facecolor="none", edgecolor="gray", alpha=0.3)
+        ctx.add_basemap(ax, source=ctx.providers.CartoDB.DarkMatter, crs="EPSG:3857")
+
+        ax.imshow(zz, extent=(x_min, x_max, y_min, y_max),
+                origin="lower", cmap="hot", alpha=0.5)
+
+        plt.savefig(IMG_DIR / "wildfire_kde_hotspots.png", dpi=300)
+        plt.close(fig)
 
     return kde

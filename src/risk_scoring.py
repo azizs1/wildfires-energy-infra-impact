@@ -349,9 +349,9 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
 
     # Combine fire metrics
     df["fire_norm"] = (
-        0.15 * normalize(df["fire_count"]) +
         0.20 * normalize(df["burned_acres"]) +
         0.25 * normalize(df["high_severity_acres"]) +
+        0.15 * normalize(df["fire_count"]) +
         0.20 * df["proximity_risk"] +
         0.10 * df["regional_fire_norm"] +
         0.10 * df["kde_norm"]
