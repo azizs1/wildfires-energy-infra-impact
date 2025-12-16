@@ -171,19 +171,31 @@ def simulate_cluster_outage(infra_graph, cluster_nodes, min_viable_size=5):
     # Count substations stranded in non-viable fragments
     stranded = 0
     if H1.number_of_nodes() > 0:
-        import networkx as nx
-        stranded = sum(
-            len(c) for c in nx.connected_components(H1) if len(c) < min_viable_size
-        )
+        stranded = sum(len(c) for c in nx.connected_components(H1) if len(c) < min_viable_size)
     
     total_impacted = len(burned_in_graph) + stranded
     baseline_size = H0.number_of_nodes()
+    pct_impacted = 0
+    if baseline_size > 0:
+        pct_impacted = total_impacted/baseline_size
+
+    # make dict of degree
+    # use this degree centrality to determine how much impact it has on overall network
+    deg = dict(H0.degree())
+    direct_degree_loss = sum(deg.get(n,1) for n in burned_in_graph)
+    largest_component_size = max((len(c) for c in nx.connected_components(H1)), default=0)
+    pct_giant = 0
+    if baseline_size > 0:
+        pct_giant = largest_component_size/baseline_size
     
     return {
         "directly_destroyed": len(burned_in_graph),
         "stranded_in_fragments": stranded,
         "total_impacted": total_impacted,
-        "pct_of_network": total_impacted / baseline_size if baseline_size > 0 else 0.0
+        "pct_of_network": pct_impacted,
+        "direct_degree_loss": direct_degree_loss,
+        "largest_component_size": largest_component_size,
+        "pct_giant_component": pct_giant
     }
 
 
@@ -262,6 +274,9 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
             "stranded": impact["stranded_in_fragments"],
             "total_impacted": impact["total_impacted"],
             "pct_of_network": impact["pct_of_network"],
+            "direct_degree_loss": impact["direct_degree_loss"],
+            "largest_component_size": impact["largest_component_size"],
+            "pct_giant_component": impact["pct_giant_component"],
             # Network metrics
             "avg_betweenness": avg_betweenness,
             # Wildfire metrics
@@ -281,18 +296,29 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     print("\nComputing composite risk scores...")
     
     # Normalize each component
-    df["outage_norm"] = normalize(df["total_impacted"])
+    df["destroyed_norm"]   = normalize(df["directly_destroyed"])
+    df["stranded_norm"]    = normalize(df["stranded"])
+    df["degree_loss_norm"] = normalize(df["direct_degree_loss"])
+
+    df["outage_norm"] = (
+        0.25 * df["stranded_norm"] +
+        0.20 * df["destroyed_norm"] +
+        0.15 * df["degree_loss_norm"]
+    )
+
     df["betweenness_norm"] = normalize(df["avg_betweenness"])
     
-    # For wildfire, combine burned acres and proximity
-    # Invert distance (closer = higher risk)
-    max_dist = df["nearest_fire_km"].max()
-    df["proximity_risk"] = 1 - (df["nearest_fire_km"] / max_dist) if max_dist > 0 else 0
+    # For wildfire, proximity risk is going to be modeled with exponential decay
+    # fruteher the nearest fire is, the lower the risk here
+    lambda_km = 10
+    df["proximity_risk"] = np.exp(-df["nearest_fire_km"] / lambda_km)
     
     # Combine fire metrics: 60% burned area, 40% proximity
     df["fire_norm"] = (
-        0.6 * normalize(df["burned_acres"]) +
-        0.4 * df["proximity_risk"]
+        0.45 * normalize(df["burned_acres"]) +
+        0.20 * normalize(df["high_severity_acres"]) +
+        0.20 * df["proximity_risk"] +
+        0.15 * normalize(df["fire_count"])
     )
     
     # Composite risk score
