@@ -8,6 +8,7 @@ from shapely.geometry import Point
 import networkx as nx
 
 from config import IMG_DIR
+from wildfire_graph import wildfire_hotspots, dbscan_wildfires
 
 
 # =============================================================================
@@ -234,6 +235,10 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     wf_gdf_projected = wf_gdf.to_crs(epsg=3310) if wf_gdf.crs != "EPSG:3310" else wf_gdf
     infra_gdf = compute_all_fire_metrics(infra_gdf, wf_gdf_projected, buffer_km)
     
+    wf_gdf_clustered, _ = dbscan_wildfires(wf_gdf_projected, eps=20000, min_samples=17)
+    wf_cluster_centroids = wf_gdf_clustered.dissolve(by="cluster").centroid
+    wf_hotspots = wildfire_hotspots(wf_gdf_projected, bandwidth=20000)
+
     # Step 3: Compute betweenness centrality
     betweenness = nx.betweenness_centrality(infra_graph, weight="importance")
     infra_gdf["betweenness"] = infra_gdf["id"].map(betweenness).fillna(0)
@@ -257,12 +262,26 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
         total_burned_acres = cluster_subs["burned_acres"].sum()
         min_fire_distance = cluster_subs["nearest_fire_km"].min()
         total_severity = cluster_subs["high_severity_acres"].sum()
-        
+
         # Average betweenness
         avg_betweenness = cluster_subs["betweenness"].mean()
         
         # Centroid for mapping
         centroid = cluster_subs.geometry.unary_union.centroid
+
+        # correlated data from the wf graph stuff
+        distances = wf_cluster_centroids.distance(centroid)
+        nearest_cluster_id = distances.idxmin()
+        nearest_cluster_dist = distances.min()
+
+        # Intensity of that wildfire cluster (sum burned acres, severity, fire count)
+        cluster_mask = wf_gdf_clustered["cluster"] == nearest_cluster_id
+        wf_cluster_burned = wf_gdf_clustered.loc[cluster_mask, "BurnBndAc"].sum()
+        wf_cluster_severity = wf_gdf_clustered.loc[cluster_mask, "High_T"].sum()
+        wf_cluster_count = cluster_mask.sum()
+
+        # KDE hotspot intensity at centroid
+        kde_val = np.exp(wf_hotspots.score_samples(np.array([[centroid.x, centroid.y]])))[0]
         
         rows.append({
             "cluster_id": int(cid),
@@ -284,6 +303,12 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
             "burned_acres": total_burned_acres,
             "nearest_fire_km": min_fire_distance,
             "high_severity_acres": total_severity,
+            # regional wildfire metrics
+            "wf_cluster_burned": wf_cluster_burned,
+            "wf_cluster_severity": wf_cluster_severity,
+            "wf_cluster_count": wf_cluster_count,
+            "wf_cluster_dist": nearest_cluster_dist,
+            "kde_intensity": kde_val
         })
     
     df = pd.DataFrame(rows)
@@ -313,12 +338,23 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     lambda_km = 10
     df["proximity_risk"] = np.exp(-df["nearest_fire_km"] / lambda_km)
     
+    # Regional wildfire signals
+    df["regional_fire_norm"] = (
+        0.5 * normalize(df["wf_cluster_burned"]) +
+        0.3 * normalize(df["wf_cluster_severity"]) +
+        0.2 * normalize(df["wf_cluster_count"])
+    ) * np.exp(-df["wf_cluster_dist"] / lambda_km)
+
+    df["kde_norm"] = normalize(df["kde_intensity"])
+
     # Combine fire metrics
     df["fire_norm"] = (
+        0.15 * normalize(df["fire_count"]) +
         0.20 * normalize(df["burned_acres"]) +
-        0.30 * normalize(df["high_severity_acres"]) +
-        0.35 * df["proximity_risk"] +
-        0.15 * normalize(df["fire_count"])
+        0.25 * normalize(df["high_severity_acres"]) +
+        0.20 * df["proximity_risk"] +
+        0.10 * df["regional_fire_norm"] +
+        0.10 * df["kde_norm"]
     )
     
     # Composite risk score
