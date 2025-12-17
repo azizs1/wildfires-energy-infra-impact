@@ -4,11 +4,9 @@ import pickle
 import argparse
 from config import CACHE_DIR, IMG_DIR
 
-from utils import convert_fires_sql_to_csv
 from wildfire_graph import WildfireGraph
 from infra_graph import InfraGraph
 from graph_integration import analyze_overlay
-from clustering import run_clustering
 from risk_scoring import compute_composite_cluster_risk, export_risk_report
 
 def load_build(graph_name, build_graph_func, no_cache):
@@ -54,7 +52,6 @@ def main():
     export_risk_report(risk_df)
 
     i_gdf, wf_gdf = analyze_overlay(i_graph, wf_graph)
-    run_clustering(i_gdf, wf_gdf, i_graph, wf_graph)
 
 if __name__ == "__main__":
     main()

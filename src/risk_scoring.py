@@ -31,7 +31,7 @@ def compute_fire_density(infra_gdf, wf_gdf, buffer_km=10):
     
     # Buffer substations
     infra_buffered = infra_gdf.copy()
-    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km * 1000)
+    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km*1000)
     
     # Spatial join to count overlapping fires
     joined = gpd.sjoin(infra_buffered, wf_gdf, predicate="intersects", how="left")
@@ -59,7 +59,7 @@ def compute_burned_area_exposure(infra_gdf, wf_gdf, buffer_km=10, acres_col="Bur
     infra_gdf = infra_gdf.copy()
     
     infra_buffered = infra_gdf.copy()
-    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km * 1000)
+    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km*1000)
     
     joined = gpd.sjoin(infra_buffered, wf_gdf, predicate="intersects", how="left")
     
@@ -93,7 +93,7 @@ def compute_severity_exposure(infra_gdf, wf_gdf, buffer_km=10, severity_col="Hig
     infra_gdf = infra_gdf.copy()
     
     infra_buffered = infra_gdf.copy()
-    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km * 1000)
+    infra_buffered["geometry"] = infra_gdf.geometry.buffer(buffer_km*1000)
     
     joined = gpd.sjoin(infra_buffered, wf_gdf, predicate="intersects", how="left")
     
@@ -208,7 +208,7 @@ def normalize(series):
     """Normalize series to 0-1 range."""
     min_val, max_val = series.min(), series.max()
     if max_val > min_val:
-        return (series - min_val) / (max_val - min_val)
+        return (series-min_val)/(max_val-min_val)
     return pd.Series(0, index=series.index)
 
 
@@ -326,9 +326,9 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     df["degree_loss_norm"] = normalize(df["direct_degree_loss"])
 
     df["outage_norm"] = (
-        0.25 * df["stranded_norm"] +
-        0.20 * df["destroyed_norm"] +
-        0.15 * df["degree_loss_norm"]
+        0.25*df["stranded_norm"] +
+        0.20*df["destroyed_norm"] +
+        0.15*df["degree_loss_norm"]
     )
 
     df["betweenness_norm"] = normalize(df["avg_betweenness"])
@@ -340,21 +340,21 @@ def compute_composite_cluster_risk(infra_graph, wf_gdf, eps=5000, min_samples=3,
     
     # Regional wildfire signals
     df["regional_fire_norm"] = (
-        0.5 * normalize(df["wf_cluster_burned"]) +
-        0.3 * normalize(df["wf_cluster_severity"]) +
-        0.2 * normalize(df["wf_cluster_count"])
+        0.5*normalize(df["wf_cluster_burned"]) +
+        0.3*normalize(df["wf_cluster_severity"]) +
+        0.2*normalize(df["wf_cluster_count"])
     ) * np.exp(-df["wf_cluster_dist"] / lambda_km)
 
     df["kde_norm"] = normalize(df["kde_intensity"])
 
     # Combine fire metrics
     df["fire_norm"] = (
-        0.20 * normalize(df["burned_acres"]) +
-        0.25 * normalize(df["high_severity_acres"]) +
-        0.15 * normalize(df["fire_count"]) +
-        0.20 * df["proximity_risk"] +
-        0.10 * df["regional_fire_norm"] +
-        0.10 * df["kde_norm"]
+        0.20*normalize(df["burned_acres"]) +
+        0.25*normalize(df["high_severity_acres"]) +
+        0.15*normalize(df["fire_count"]) +
+        0.20*df["proximity_risk"] +
+        0.10*df["regional_fire_norm"] +
+        0.10*df["kde_norm"]
     )
     
     # Composite risk score

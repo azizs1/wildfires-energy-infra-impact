@@ -156,6 +156,12 @@ class InfraGraph:
                 degrees.append(degree)
             avg_degree = np.mean(degrees)
         
-        summary = {"num_substations": num_substations, "num_transmission_lines": num_transmission_lines, "num_connected_components": num_connected_components, "largest_component_size": largest_component_size,"avg_degree": avg_degree}
+        summary = {
+            "num_substations": num_substations, 
+            "num_transmission_lines": num_transmission_lines, 
+            "num_connected_components": num_connected_components, 
+            "largest_component_size": largest_component_size,
+            "avg_degree": avg_degree
+        }
         
         return summary
